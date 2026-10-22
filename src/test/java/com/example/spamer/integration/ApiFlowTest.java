@@ -88,6 +88,84 @@ class ApiFlowTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void proxyCrudLifecycle() throws Exception {
+        MvcResult created = mvc.perform(post("/api/v1/proxy")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "host", "10.0.0.8",
+                                "port", 8080,
+                                "protocol", "HTTP",
+                                "country", "FI",
+                                "status", "ACTIVE"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.host", is("10.0.0.8")))
+                .andReturn();
+        String id = json.readTree(created.getResponse().getContentAsString()).get("id").asText();
+
+        mvc.perform(get("/api/v1/proxy/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.port", is(8080)));
+
+        mvc.perform(put("/api/v1/proxy/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "host", "10.0.0.9",
+                                "port", 1080,
+                                "protocol", "SOCKS5",
+                                "country", "DE",
+                                "status", "CHECKING"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.protocol", is("SOCKS5")));
+
+        mvc.perform(patch("/api/v1/proxy/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("status", "BANNED"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("BANNED")))
+                .andExpect(jsonPath("$.host", is("10.0.0.9")));
+
+        mvc.perform(get("/api/v1/proxy").param("page", "0").param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(header().exists("X-Total-Count"));
+
+        mvc.perform(delete("/api/v1/proxy/{id}", id)).andExpect(status().isNoContent());
+        mvc.perform(get("/api/v1/proxy/{id}", id)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void serviceCrudLifecycle() throws Exception {
+        String id = createService("catalog-" + System.nanoTime(), "2.5000");
+
+        mvc.perform(get("/api/v1/services/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pricePerMessage", is(2.5)))
+                .andExpect(jsonPath("$.active", is(true)));
+
+        mvc.perform(put("/api/v1/services/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "name", "catalog-replaced-" + System.nanoTime(),
+                                "description", "replaced",
+                                "pricePerMessage", "3.0000",
+                                "active", false))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active", is(false)));
+
+        mvc.perform(patch("/api/v1/services/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("active", true))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active", is(true)));
+
+        mvc.perform(get("/api/v1/services").param("page", "0").param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(header().exists("X-Total-Count"));
+
+        mvc.perform(delete("/api/v1/services/{id}", id)).andExpect(status().isNoContent());
+        mvc.perform(get("/api/v1/services/{id}", id)).andExpect(status().isNotFound());
+    }
+
+    @Test
     void duplicateUsernameConflicts() throws Exception {
         createUser("bob", "bob@example.com", "USER_FREE", "0");
         mvc.perform(post("/api/v1/users")
