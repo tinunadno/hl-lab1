@@ -22,5 +22,5 @@ jobs:
       - name: Build, test and coverage gate
         run: mvn -B verify
 
-      - name: Build Docker image
-        run: docker build -t spamer-monolith:ci .
+      - name: Build Docker images
+        run: docker compose build

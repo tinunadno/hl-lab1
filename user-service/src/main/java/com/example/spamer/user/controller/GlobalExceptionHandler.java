@@ -1,0 +1,87 @@
+package com.example.spamer.user.controller;
+
+import com.example.spamer.common.error.ApiError;
+import com.example.spamer.common.error.BusinessException;
+import com.example.spamer.common.error.ConflictException;
+import com.example.spamer.common.error.DependencyUnavailableException;
+import com.example.spamer.common.error.NotFoundException;
+import jakarta.validation.ConstraintViolationException;
+import java.time.Instant;
+import java.util.List;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.support.WebExchangeBindException;
+import org.springframework.web.server.ServerWebInputException;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ApiError> handleNotFound(NotFoundException ex, ServerHttpRequest req) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), req, null);
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ApiError> handleConflict(ConflictException ex, ServerHttpRequest req) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), req, null);
+    }
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiError> handleBusiness(BusinessException ex, ServerHttpRequest req) {
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), req, null);
+    }
+
+    @ExceptionHandler(DependencyUnavailableException.class)
+    public ResponseEntity<ApiError> handleUnavailable(
+            DependencyUnavailableException ex, ServerHttpRequest req) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), req, null);
+    }
+
+    @ExceptionHandler(WebExchangeBindException.class)
+    public ResponseEntity<ApiError> handleValidation(
+            WebExchangeBindException ex, ServerHttpRequest req) {
+        List<ApiError.FieldError> details = ex.getBindingResult().getFieldErrors().stream()
+                .map(fe -> new ApiError.FieldError(fe.getField(), fe.getDefaultMessage()))
+                .toList();
+        return build(HttpStatus.BAD_REQUEST, "Validation failed", req, details);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiError> handleConstraint(
+            ConstraintViolationException ex, ServerHttpRequest req) {
+        List<ApiError.FieldError> details = ex.getConstraintViolations().stream()
+                .map(v -> new ApiError.FieldError(v.getPropertyPath().toString(), v.getMessage()))
+                .toList();
+        return build(HttpStatus.BAD_REQUEST, "Validation failed", req, details);
+    }
+
+    // Malformed body or a bad value in the path or query, e.g. an invalid UUID.
+    @ExceptionHandler(ServerWebInputException.class)
+    public ResponseEntity<ApiError> handleUnreadable(
+            ServerWebInputException ex, ServerHttpRequest req) {
+        return build(HttpStatus.BAD_REQUEST, "Malformed request", req, null);
+    }
+
+    // Unique-constraint races that slip past the pre-checks still come out as 409.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrity(
+            DataIntegrityViolationException ex, ServerHttpRequest req) {
+        return build(HttpStatus.CONFLICT, "Constraint violation", req, null);
+    }
+
+    private ResponseEntity<ApiError> build(
+            HttpStatus status, String message, ServerHttpRequest req,
+            List<ApiError.FieldError> details) {
+        return ResponseEntity.status(status).body(new ApiError(
+                Instant.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                message,
+                req.getPath().value(),
+                details));
+    }
+}

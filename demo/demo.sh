@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Демо для защиты: создаёт пользователя, сервис, прокси и дёргает /spam/send.
-# Приложение должно быть уже запущено и указывать SENDER_TARGET_URL на приёмник.
+# Система должна быть запущена; все запросы идут через API Gateway.
 #
 #   BASE=http://localhost:8080 ./demo/demo.sh
 #
@@ -40,4 +40,4 @@ say "баланс после отправки (должен стать $(( BALAN
 curl -fsS "$BASE/users/$USER_ID" | python3 -c "import sys,json; print('balance =', json.load(sys.stdin)['balance'])"
 
 echo
-echo "Смотри лог приёмника на VPS — там должны появиться 3 входящих сообщения."
+echo "Смотри лог приёмника: там должно появиться сообщений: $COUNT."

@@ -1,0 +1,51 @@
+# provider_id points to catalog-service (another database): no foreign key.
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-proxy
+      author: lab
+      changes:
+        - createTable:
+            tableName: proxy
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: host
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: port
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: protocol
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: country
+                  type: varchar(64)
+              - column:
+                  name: status
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: provider_id
+                  type: uuid
+        - sql:
+            sql: ALTER TABLE proxy ADD CONSTRAINT chk_proxy_port CHECK (port BETWEEN 1 AND 65535)
+        - sql:
+            sql: >-
+              ALTER TABLE proxy ADD CONSTRAINT chk_proxy_protocol
+              CHECK (protocol IN ('HTTP', 'HTTPS', 'SOCKS5'))
+        - sql:
+            sql: >-
+              ALTER TABLE proxy ADD CONSTRAINT chk_proxy_status
+              CHECK (status IN ('ACTIVE', 'BANNED', 'CHECKING'))

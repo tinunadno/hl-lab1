@@ -1,6 +1,8 @@
-target/
+**/target/
 .git/
 .github/
 *.md
 .idea/
 *.iml
+demo/
+docker/

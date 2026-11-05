@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: catalog-service
+  main:
+    web-application-type: reactive
+  cloud:
+    config:
+      enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+eureka:
+  client:
+    enabled: false

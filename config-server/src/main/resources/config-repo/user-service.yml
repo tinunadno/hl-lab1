@@ -1,0 +1,13 @@
+server:
+  port: 8081
+
+spring:
+  r2dbc:
+    url: ${USER_DB_R2DBC_URL:r2dbc:postgresql://localhost:5432/spamer_users}
+    username: ${DB_USERNAME:spamer}
+    password: ${DB_PASSWORD:spamer}
+  liquibase:
+    url: ${USER_DB_JDBC_URL:jdbc:postgresql://localhost:5432/spamer_users}
+    user: ${DB_USERNAME:spamer}
+    password: ${DB_PASSWORD:spamer}
+    change-log: classpath:db/changelog/db.changelog-master.yaml

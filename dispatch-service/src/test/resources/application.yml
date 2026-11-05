@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: dispatch-service
+  cloud:
+    config:
+      enabled: false
+    openfeign:
+      circuitbreaker:
+        enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+eureka:
+  client:
+    enabled: false
+
+spamer:
+  sender:
+    target-url: http://localhost:8083/api/v1/test-receiver/inbox
+    connect-timeout-ms: 2000
+    read-timeout-ms: 5000
+  refund:
+    # Tests trigger retries themselves.
+    retry-delay-ms: 3600000

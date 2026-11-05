@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/001-create-proxy.yaml
+  - include:
+      file: db/changelog/changes/002-create-spam-log.yaml
+  - include:
+      file: db/changelog/changes/003-create-spam-log-proxy.yaml

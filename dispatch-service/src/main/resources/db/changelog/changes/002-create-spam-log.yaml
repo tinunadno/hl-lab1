@@ -1,0 +1,61 @@
+# user_id points to user-service (another database): no foreign key.
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-spam-log
+      author: lab
+      changes:
+        - createTable:
+            tableName: spam_log
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: victim_contact
+                  type: varchar(256)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: message_body
+                  type: text
+              - column:
+                  name: status
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sent_at
+                  type: timestamp
+              - column:
+                  name: operation_id
+                  type: uuid
+                  constraints:
+                    unique: true
+              - column:
+                  name: refund_pending
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: idx_spam_log_user
+            tableName: spam_log
+            columns:
+              - column:
+                  name: user_id
+        - sql:
+            sql: >-
+              CREATE INDEX idx_spam_log_refund_pending ON spam_log (refund_pending)
+              WHERE refund_pending
+        - sql:
+            sql: >-
+              ALTER TABLE spam_log ADD CONSTRAINT chk_spam_log_status
+              CHECK (status IN ('QUEUED', 'SENT', 'FAILED', 'BLOCKED'))
