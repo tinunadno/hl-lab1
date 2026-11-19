@@ -11,17 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
-/**
- * Balance steps of the /spam/send saga. A caller may not know whether a timed-out
- * debit was applied, so both operations are idempotent by operationId and a debit
- * can always be followed by a refund:
- * - a repeated debit or refund changes nothing;
- * - a refund for an unknown operation records a zero-amount REFUNDED row, so a
- *   debit that arrives late is ignored too and no money moves.
- *
- * Why transactions: the journal row and the balance must change together,
- * otherwise an operation can be recorded without the money moving, or the reverse.
- */
+
 @Service
 @RequiredArgsConstructor
 public class BalanceService {
@@ -63,7 +53,7 @@ public class BalanceService {
                 .map(rows -> rows > 0);
     }
 
-    // The WHERE clause makes the check and the write atomic under concurrent sends.
+
     private Mono<Void> charge(UUID userId, BigDecimal amount) {
         return db.sql("""
                         UPDATE users SET balance = balance - :amount, updated_at = now()

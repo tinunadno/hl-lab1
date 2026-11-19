@@ -35,7 +35,7 @@ public class UserService {
                     u.setId(UUID.randomUUID());
                     u.setCreatedAt(OffsetDateTime.now());
                     apply(u, req);
-                    // The id is assigned here, so save() would try an UPDATE.
+
                     return template.insert(u);
                 }))
                 .map(UserResponse::from);

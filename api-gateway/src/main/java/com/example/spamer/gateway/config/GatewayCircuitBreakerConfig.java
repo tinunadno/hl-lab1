@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class GatewayCircuitBreakerConfig {
 
-    // The default time limit is 1 second, which would cut off a normal /spam/send.
+
     @Bean
     public Customizer<ReactiveResilience4JCircuitBreakerFactory> gatewayCircuitBreakerDefaults(
             @Value("${spamer.gateway.timeout-seconds:60}") long timeoutSeconds) {

@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# Демо для защиты: при остановленном catalog-service запрос получает понятный 503,
-# а не зависает, остальная система работает. После запуска сервиса всё восстанавливается.
-#
-#   ./demo/circuit-breaker.sh
-#
 set -uo pipefail
 BASE="${BASE:-http://localhost:8080}/api/v1"
 J='Content-Type: application/json'

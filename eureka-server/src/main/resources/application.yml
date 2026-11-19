@@ -10,7 +10,6 @@ eureka:
     register-with-eureka: false
     fetch-registry: false
   server:
-    # A single-node registry on a laptop: don't keep dead instances around.
     enable-self-preservation: false
 
 management:

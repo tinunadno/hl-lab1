@@ -56,7 +56,7 @@
             <artifactId>r2dbc-postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
-        <!-- Liquibase has no R2DBC support, so migrations run over a separate JDBC connection -->
+
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-jdbc</artifactId>

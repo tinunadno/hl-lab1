@@ -14,7 +14,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 @AutoConfigureWebTestClient
 public abstract class AbstractIntegrationTest {
 
-    // One container for all test classes: cached Spring contexts keep using it.
+
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16");
 
     static {

@@ -11,12 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
-/**
- * Does the actual HTTP POST for a single message. The destination comes only
- * from config ({@code spamer.sender.target-url}) - never from the request - so
- * this can only ever talk to the one receiver the operator points it at
- * (the built-in test endpoint, or your own test server via SENDER_TARGET_URL).
- */
+
 @Service
 @RequiredArgsConstructor
 public class MessageSender {
@@ -27,7 +22,7 @@ public class MessageSender {
     private final Environment env;
 
     public SendResult send(String contact, String body, int index) {
-        // read lazily so the target can be re-pointed via config without a rebuild
+
         String target = env.getProperty("spamer.sender.target-url");
         long started = System.currentTimeMillis();
         try {
@@ -49,13 +44,13 @@ public class MessageSender {
                     snippet(resp.getBody()),
                     ms);
         } catch (RestClientResponseException e) {
-            // receiver answered, but with an error status
+
             long ms = System.currentTimeMillis() - started;
             log.warn("sent #{} to {} -> HTTP {}", index, target, e.getStatusCode().value());
             return new SendResult(
                     e.getStatusCode().value(), false, snippet(e.getResponseBodyAsString()), ms);
         } catch (Exception e) {
-            // couldn't reach it at all (down, DNS, timeout)
+
             long ms = System.currentTimeMillis() - started;
             log.warn("send #{} to {} failed: {}", index, target, e.getMessage());
             return new SendResult(0, false, e.getMessage(), ms);

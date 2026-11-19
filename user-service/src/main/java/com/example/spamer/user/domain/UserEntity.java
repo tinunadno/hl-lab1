@@ -20,7 +20,7 @@ public class UserEntity {
 
     private String email;
 
-    // Spring Data R2DBC stores enums by name, so this is a string in the database.
+
     private UserRole role;
 
     private BigDecimal balance = BigDecimal.ZERO;

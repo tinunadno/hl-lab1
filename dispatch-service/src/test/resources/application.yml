@@ -24,5 +24,4 @@ spamer:
     connect-timeout-ms: 2000
     read-timeout-ms: 5000
   refund:
-    # Tests trigger retries themselves.
     retry-delay-ms: 3600000

@@ -100,7 +100,7 @@ public class ProxyService {
         return repo.findByStatus(ProxyStatus.ACTIVE, Limit.of(Math.max(1, limit)));
     }
 
-    // Runs before the transaction: a remote call must not hold a database connection.
+
     private void checkProvider(UUID providerId) {
         if (providerId != null) {
             catalog.get(providerId);

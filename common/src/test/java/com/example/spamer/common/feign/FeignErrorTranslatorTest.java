@@ -34,6 +34,8 @@ class FeignErrorTranslatorTest {
                 .isInstanceOf(ConflictException.class);
         assertThat(FeignErrorTranslator.translate("s", status(422)))
                 .isInstanceOf(BusinessException.class);
+        assertThat(FeignErrorTranslator.translate("s", status(400)))
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test

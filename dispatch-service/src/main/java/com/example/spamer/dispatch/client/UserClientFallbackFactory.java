@@ -5,7 +5,7 @@ import java.util.UUID;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 
-// Runs on any failed call and on an open circuit breaker.
+
 @Component
 public class UserClientFallbackFactory implements FallbackFactory<UserClient> {
 

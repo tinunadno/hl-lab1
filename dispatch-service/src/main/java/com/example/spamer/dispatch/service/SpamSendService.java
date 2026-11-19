@@ -14,21 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-/**
- * Saga behind POST /spam/send. The balance now lives in user-service, so the
- * single database transaction of the monolith is no longer possible. Instead:
- * read price -> journal QUEUED -> debit -> POST messages -> mark SENT.
- * If delivery fails, the send is marked FAILED and the debit is compensated.
- *
- * No step holds a database transaction during a network call.
- *
- * The destination is operator config only (spamer.sender.target-url) - the
- * request body never chooses where this connects, so it can only reach the one
- * test receiver you point it at.
- *
- * A POST that was already accepted can't be "unsent": if message 2 of N fails,
- * the money is returned, but the receiver has still got message 1.
- */
+
 @Service
 @RequiredArgsConstructor
 public class SpamSendService {
@@ -82,12 +68,12 @@ public class SpamSendService {
             return users.debit(userId, new UserClient.DebitDto(refund.operationId(), cost))
                     .balance();
         } catch (DependencyUnavailableException e) {
-            // A timeout doesn't say whether the debit was applied, so compensate
-            // anyway. Refunding an operation that never happened changes nothing.
+
+
             compensate(refund);
             throw e;
         } catch (RuntimeException e) {
-            // Definite refusal (no such user, not enough money): nothing happened.
+
             logs.discard(refund.spamLogId());
             throw e;
         }

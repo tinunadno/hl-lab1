@@ -15,10 +15,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Blocking JPA part of the service. Every method is one transaction and must be
- * called from a worker thread, which {@link ServiceCatalogService} guarantees.
- */
+
 @Component
 @RequiredArgsConstructor
 public class ServiceCatalogStore {

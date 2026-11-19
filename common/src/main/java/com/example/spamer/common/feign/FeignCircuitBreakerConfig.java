@@ -11,11 +11,7 @@ import org.springframework.cloud.client.circuitbreaker.Customizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Breaker settings for all Feign calls. Values come from the Config Server.
- * A 4xx is not a failure of the remote service (a missing user must not open
- * the breaker), so client errors are ignored.
- */
+
 @Configuration
 public class FeignCircuitBreakerConfig {
 

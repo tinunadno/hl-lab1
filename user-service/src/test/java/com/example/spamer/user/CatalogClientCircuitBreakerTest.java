@@ -16,10 +16,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 
-/**
- * Exercises the real chain: Feign -> load balancer -> HTTP -> circuit breaker ->
- * fallback, against a local stub standing in for catalog-service.
- */
+
 @TestPropertySource(properties = {
     "spamer.circuit-breaker.sliding-window-size=2",
     "spamer.circuit-breaker.minimum-calls=2",
@@ -82,7 +79,7 @@ class CatalogClientCircuitBreakerTest extends AbstractIntegrationTest {
                     .expectBody().jsonPath("$.status").isEqualTo(503);
         }
 
-        // after two failures the breaker is open and the stub gets no more calls
+
         assertThat(HITS.get()).isEqualTo(2);
     }
 }

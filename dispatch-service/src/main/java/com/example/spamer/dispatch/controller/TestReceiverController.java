@@ -10,12 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Built-in "учебный сервер": a loopback receiver so /spam/send has a real HTTP
- * target out of the box without needing an external box. It just logs what came
- * in and echoes 200. For a real demo point SENDER_TARGET_URL at your own server
- * instead; this stays as the default/fallback.
- */
+
 @RestController
 @RequestMapping("/api/v1/test-receiver")
 public class TestReceiverController {

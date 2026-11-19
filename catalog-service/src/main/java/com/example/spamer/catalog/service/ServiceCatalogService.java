@@ -11,11 +11,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-/**
- * Reactive facade over blocking JPA. Each call moves to boundedElastic, so JDBC
- * never blocks a Netty event-loop thread. The transaction opens and closes
- * inside one store call, on one worker thread, because JPA binds it to the thread.
- */
+
 @Service
 @RequiredArgsConstructor
 public class ServiceCatalogService {

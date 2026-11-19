@@ -37,8 +37,7 @@ public class ProxyEntity {
     @Column(nullable = false, length = 16)
     private ProxyStatus status;
 
-    // Service in catalog-service (another database), so a plain id, not a relation.
-    // nullable: a proxy may exist before it's attributed to a provider service.
+
     private UUID providerId;
 
     @PrePersist

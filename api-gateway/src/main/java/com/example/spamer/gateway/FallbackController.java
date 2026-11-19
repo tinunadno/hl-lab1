@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-// Answer of the gateway when a service behind it is down or its breaker is open.
+
 @Hidden
 @RestController
 public class FallbackController {

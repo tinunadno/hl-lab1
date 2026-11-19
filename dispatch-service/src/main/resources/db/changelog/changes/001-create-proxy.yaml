@@ -1,4 +1,3 @@
-# provider_id points to catalog-service (another database): no foreign key.
 databaseChangeLog:
   - changeSet:
       id: 001-create-proxy

@@ -53,7 +53,7 @@ public class SpamLogController {
                 .body(service.list(page, size));
     }
 
-    // Cursor feed for infinite scroll - no total count exposed by design.
+
     @GetMapping("/feed")
     public ResponseEntity<CursorPage<SpamLogResponse>> feed(
             @RequestParam(required = false) UUID cursor,

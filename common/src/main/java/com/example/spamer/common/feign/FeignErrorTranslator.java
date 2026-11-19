@@ -6,12 +6,7 @@ import com.example.spamer.common.error.DependencyUnavailableException;
 import com.example.spamer.common.error.NotFoundException;
 import feign.FeignException;
 
-/**
- * Turns whatever reached a Feign fallback into a domain exception. A 4xx is a
- * real answer from the remote service and keeps its meaning; everything else
- * (connection refused, timeout, 5xx, open breaker) means the dependency is
- * unavailable.
- */
+
 public final class FeignErrorTranslator {
 
     private FeignErrorTranslator() {
@@ -36,7 +31,7 @@ public final class FeignErrorTranslator {
         return new DependencyUnavailableException(dependency, failure);
     }
 
-    // The breaker's time limiter may wrap the original exception.
+
     private static FeignException findFeignException(Throwable failure) {
         Throwable current = failure;
         while (current != null) {

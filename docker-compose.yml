@@ -5,15 +5,13 @@ services:
       POSTGRES_USER: ${DB_USERNAME:-spamer}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-spamer}
     ports:
-      - "5432:5432"
+      - "15432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${DB_USERNAME:-spamer} -d spamer_dispatch"]
       interval: 5s
       timeout: 5s
       retries: 10
     volumes:
-      # A separate volume: init scripts only run on an empty data directory, so
-      # the volume left over from lab 1 would never get the new databases.
       - pgdata-lab2:/var/lib/postgresql/data
       - ./docker/postgres:/docker-entrypoint-initdb.d:ro
 
@@ -39,6 +37,9 @@ services:
         MODULE: config-server
     environment:
       EUREKA_URL: http://eureka-server:8761/eureka/
+      CONFIG_REPO_URI: file:///config-repo
+    volumes:
+      - ./config-repo:/config-repo:ro
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -159,3 +160,9 @@ services:
 
 volumes:
   pgdata-lab2:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.29.10.0/24

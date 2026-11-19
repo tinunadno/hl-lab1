@@ -1,4 +1,3 @@
-# user_id points to user-service (another database): no foreign key.
 databaseChangeLog:
   - changeSet:
       id: 002-create-spam-log

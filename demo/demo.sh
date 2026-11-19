@@ -1,15 +1,8 @@
 #!/usr/bin/env bash
-# Демо для защиты: создаёт пользователя, сервис, прокси и дёргает /spam/send.
-# Система должна быть запущена; все запросы идут через API Gateway.
-#
-#   BASE=http://localhost:8080 ./demo/demo.sh
-#
 set -euo pipefail
 BASE="${BASE:-http://localhost:8080}/api/v1"
-# сколько сообщений слать: ./demo/demo.sh 100  (или COUNT=100 ./demo/demo.sh)
 COUNT="${1:-${COUNT:-3}}"
 PRICE=2
-# баланса даём с запасом под COUNT*PRICE, чтобы не упереться в 422
 BALANCE=$(( COUNT * PRICE + 50 ))
 
 jqid() { python3 -c "import sys,json; print(json.load(sys.stdin)['id'])"; }

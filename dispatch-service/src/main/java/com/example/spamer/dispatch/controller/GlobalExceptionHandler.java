@@ -65,7 +65,7 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "Malformed request body", req, null);
     }
 
-    // Unique-constraint races that slip past the pre-checks still come out as 409.
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDataIntegrity(
             DataIntegrityViolationException ex, HttpServletRequest req) {

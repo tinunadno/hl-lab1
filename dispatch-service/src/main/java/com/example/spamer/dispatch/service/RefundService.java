@@ -9,11 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-/**
- * Compensation step of the /spam/send saga. If user-service is down the refund
- * stays pending in the spam log and is retried on a schedule. Retrying is safe
- * because refunds are idempotent by operationId.
- */
+
 @Service
 @RequiredArgsConstructor
 public class RefundService {
@@ -28,7 +24,7 @@ public class RefundService {
             users.refund(refund.userId(), new UserClient.RefundDto(refund.operationId()));
             logs.clearRefundPending(refund.spamLogId());
         } catch (NotFoundException e) {
-            // The user was deleted, so there is nobody left to refund.
+
             log.warn("Refund {} dropped: user {} no longer exists",
                     refund.operationId(), refund.userId());
             logs.clearRefundPending(refund.spamLogId());

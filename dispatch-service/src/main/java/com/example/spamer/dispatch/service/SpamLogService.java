@@ -33,7 +33,7 @@ public class SpamLogService {
     private final TransactionTemplate tx;
 
     public SpamLogResponse create(CreateSpamLogRequest req) {
-        // Runs before the transaction: a remote call must not hold a database connection.
+
         users.get(req.userId());
         return tx.execute(status -> {
             SpamLogEntity log = new SpamLogEntity();
@@ -59,8 +59,7 @@ public class SpamLogService {
         return repo.count();
     }
 
-    // Cursor feed for infinite scroll. We fetch size+1 to know if there's more
-    // without doing a separate count query.
+
     @Transactional(readOnly = true)
     public CursorPage<SpamLogResponse> feed(UUID cursor, int size) {
         List<SpamLogEntity> rows = cursor == null
@@ -109,7 +108,7 @@ public class SpamLogService {
         repo.deleteById(id);
     }
 
-    /** Saga step: journal the send and its proxies before any money moves. */
+
     @Transactional
     public UUID createQueued(SpamSendRequest req, UUID operationId) {
         SpamLogEntity log = new SpamLogEntity();

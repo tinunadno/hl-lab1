@@ -28,7 +28,7 @@ public class ServiceEntity {
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal pricePerMessage;
 
-    // Column is is_active; the field name "active" would map to "active".
+
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 

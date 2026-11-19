@@ -11,12 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
-/**
- * Transactional part of a subscription. Creating the subscription row and
- * flipping the user to USER_PRO have to be consistent - otherwise you get "PRO
- * without a subscription" or "subscription but still free". Both tables belong
- * to this service, so one local transaction covers them.
- */
+
 @Component
 @RequiredArgsConstructor
 public class SubscriptionWriter {
@@ -44,7 +39,7 @@ public class SubscriptionWriter {
                         ? Mono.just(rows)
                         : Mono.<Long>error(new ConflictException(
                                 "Already subscribed to service: " + serviceName)))
-                // First paid subscription promotes a free user. Admins/operators keep their role.
+
                 .then(db.sql("""
                                 UPDATE users SET role = 'USER_PRO', updated_at = now()
                                 WHERE id = :userId AND role = 'USER_FREE'

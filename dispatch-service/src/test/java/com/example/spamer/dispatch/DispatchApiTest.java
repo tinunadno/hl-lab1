@@ -50,10 +50,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-/**
- * Real Postgres and a real HTTP receiver. Neighbouring services are mocked at
- * the Feign boundary. Proves /spam/send does real POSTs and keeps the journal right.
- */
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
@@ -198,7 +195,7 @@ class DispatchApiTest {
 
         send(sendBody(1), 503);
 
-        // user-service is back: the scheduled retry completes the refund exactly once more
+
         org.mockito.Mockito.reset(users);
         refunds.retryPending();
         verify(users).refund(eq(userId), any());

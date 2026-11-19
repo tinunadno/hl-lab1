@@ -91,7 +91,7 @@ class UserApiTest extends AbstractIntegrationTest {
                 .expectStatus().isOk()
                 .expectBody().jsonPath("$.balance").isEqualTo(6.0);
 
-        // the same operation again changes nothing
+
         post(uri, Map.of("operationId", operation, "amount", "4.00"))
                 .expectStatus().isOk()
                 .expectBody().jsonPath("$.balance").isEqualTo(6.0);
@@ -106,7 +106,7 @@ class UserApiTest extends AbstractIntegrationTest {
                 Map.of("operationId", operation, "amount", "5.00"))
                 .expectStatus().isEqualTo(422);
 
-        // nothing was charged, so the refund becomes a no-op tombstone
+
         post("/internal/v1/users/" + id + "/balance/refund", Map.of("operationId", operation))
                 .expectStatus().isOk()
                 .expectBody().jsonPath("$.balance").isEqualTo(1.0);
@@ -126,7 +126,7 @@ class UserApiTest extends AbstractIntegrationTest {
                     .expectBody().jsonPath("$.balance").isEqualTo(10.0);
         }
 
-        // a repeated debit of a refunded operation is refused
+
         post("/internal/v1/users/" + id + "/balance/debit",
                 Map.of("operationId", operation, "amount", "4.00"))
                 .expectStatus().isEqualTo(409);

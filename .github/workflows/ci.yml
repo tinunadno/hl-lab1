@@ -17,8 +17,6 @@ jobs:
           java-version: "17"
           cache: maven
 
-      # Run on the runner directly (not inside a container) so Testcontainers
-      # can reach the host Docker daemon. verify enforces the JaCoCo 70% gate.
       - name: Build, test and coverage gate
         run: mvn -B verify
 

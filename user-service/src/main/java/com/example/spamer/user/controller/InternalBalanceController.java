@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
-// Service-to-service API: the gateway has no route to /internal/**.
+
 @Hidden
 @RestController
 @RequestMapping("/internal/v1/users/{id}/balance")

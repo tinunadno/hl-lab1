@@ -26,7 +26,7 @@ public class SpamLogEntity {
     @Id
     private UUID id;
 
-    // User in user-service (another database), so a plain id, not a relation.
+
     @Column(nullable = false)
     private UUID userId;
 
@@ -42,15 +42,15 @@ public class SpamLogEntity {
 
     private Instant sentAt;
 
-    // Saga operation of /spam/send; null for rows created through the CRUD API.
+
     @Column(unique = true)
     private UUID operationId;
 
-    // The money for this failed send has not been confirmed as returned yet.
+
     @Column(nullable = false)
     private boolean refundPending;
 
-    // Implicit names would be spam_log_proxies and proxies_id.
+
     @ManyToMany
     @JoinTable(
             name = "spam_log_proxy",

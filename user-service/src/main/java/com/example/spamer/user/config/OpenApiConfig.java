@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
-    // Relative server: "Try it out" in the shared Swagger goes through the gateway.
+
     @Bean
     public OpenAPI userOpenApi() {
         return new OpenAPI()

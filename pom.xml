@@ -26,6 +26,7 @@
         <module>user-service</module>
         <module>catalog-service</module>
         <module>dispatch-service</module>
+        <module>coverage-report</module>
     </modules>
 
     <properties>
@@ -100,7 +101,7 @@
                                         </limits>
                                     </rule>
                                 </rules>
-                                <!-- bootstrap, config and generated mappers carry no logic worth gating on -->
+
                                 <excludes>
                                     <exclude>**/*Application.class</exclude>
                                     <exclude>**/config/**</exclude>

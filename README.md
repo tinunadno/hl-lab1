@@ -29,7 +29,7 @@ flowchart LR
 
 | Модуль | Отвечает за | Стек |
 |--------|-------------|------|
-| `config-server` | конфигурация всех сервисов (`config-repo/`) | Config Server, native |
+| `config-server` | раздаёт конфигурацию из отдельного git-репозитория `config-repo/` | Config Server, Git |
 | `eureka-server` | реестр сервисов | Eureka Server |
 | `api-gateway` | единая точка входа, общий Swagger, fallback | Spring Cloud Gateway |
 | `user-service` | `users`, `user_service_subscriptions`, `balance_operations` | WebFlux, **Reactor + R2DBC** |
@@ -42,8 +42,8 @@ flowchart LR
 | Требование | Где реализовано |
 |-----------|-----------------|
 | Регистрация в Eureka | `eureka-server`, клиент во всех сервисах |
-| Конфигурация из Config Server | `config-server/src/main/resources/config-repo/`, `spring.config.import` в клиентах |
-| Доступ через Spring Gateway | маршруты в `config-repo/api-gateway.yml` |
+| Конфигурация из Config Server | отдельный репозиторий `config-repo/`, Git-бэкенд config-server, `spring.config.import` в клиентах |
+| Доступ через Spring Gateway | маршруты в `config-repo/api-gateway/api-gateway.yml` |
 | Feign Client | `dispatch-service/.../client`, `user-service/.../client` |
 | Circuit Breaker | Resilience4j: Feign-клиенты (`FeignCircuitBreakerConfig`) и маршруты gateway |
 | Reactor + R2DBC | `user-service` |
@@ -78,8 +78,10 @@ docker compose up --build
 mvn verify                # нужен запущенный Docker (Testcontainers)
 ```
 
-Порог покрытия JaCoCo — 70% по строкам в каждом доменном сервисе. Отчёт:
-`<сервис>/target/site/jacoco/index.html`.
+Порог покрытия JaCoCo — 70% по строкам в каждом доменном сервисе
+(`user-service`, `catalog-service`, `dispatch-service`). Общий отчёт по всем
+модулям: `target/site/jacoco/index.html`. Отчёт
+отдельного модуля: `<модуль>/target/site/jacoco/index.html`.
 
 - Модульные тесты: сага `SpamSendService`, возвраты, `SubscriptionService`, разбор ошибок Feign.
 - Интеграционные тесты на реальном PostgreSQL: API всех сервисов.
@@ -178,7 +180,8 @@ SENDER_TARGET_URL=http://<IP>:9000/inbox docker compose up --build
 
 ```
 ├── common/             # ошибки, поддержка Feign и Circuit Breaker
-├── config-server/      # src/main/resources/config-repo — конфигурация сервисов
+├── config-repo/        # отдельный git-репозиторий: папка на сервис и общий application.yml
+├── config-server/      # читает config-repo по Git (file:// или CONFIG_REPO_URI)
 ├── eureka-server/
 ├── api-gateway/
 ├── user-service/       # controller, service, domain, dto, client
