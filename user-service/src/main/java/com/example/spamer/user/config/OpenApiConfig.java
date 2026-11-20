@@ -1,7 +1,10 @@
 package com.example.spamer.user.config;
 
+import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
@@ -10,12 +13,20 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
+    static final String BEARER = "bearerAuth";
+
 
     @Bean
     public OpenAPI userOpenApi() {
         return new OpenAPI()
                 .info(new Info().title("User Service API").version("v1")
                         .description("Users, balances and subscriptions. Reactor + R2DBC."))
-                .servers(List.of(new Server().url("/")));
+                .servers(List.of(new Server().url("/")))
+                .components(new Components().addSecuritySchemes(BEARER, new SecurityScheme()
+                        .type(SecurityScheme.Type.HTTP)
+                        .scheme("bearer")
+                        .bearerFormat("JWT")
+                        .description("Токен из POST /api/v1/auth/login")))
+                .addSecurityItem(new SecurityRequirement().addList(BEARER));
     }
 }

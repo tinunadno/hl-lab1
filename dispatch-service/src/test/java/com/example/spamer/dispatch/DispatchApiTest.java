@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -21,6 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.spamer.common.error.BusinessException;
 import com.example.spamer.common.error.DependencyUnavailableException;
 import com.example.spamer.common.error.NotFoundException;
+import com.example.spamer.common.security.JwtTokenIssuer;
 import com.example.spamer.dispatch.client.CatalogClient;
 import com.example.spamer.dispatch.client.UserClient;
 import com.example.spamer.dispatch.service.RefundService;
@@ -35,24 +37,27 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 
 @SpringBootTest
-@AutoConfigureMockMvc
 @Testcontainers
 class DispatchApiTest {
 
@@ -88,15 +93,35 @@ class DispatchApiTest {
                 () -> "http://127.0.0.1:" + STUB.getAddress().getPort() + "/inbox");
     }
 
-    @Autowired MockMvc mvc;
+    @Autowired WebApplicationContext context;
     @Autowired ObjectMapper json;
     @Autowired RefundService refunds;
+    @Autowired JwtTokenIssuer tokens;
+
+    /** Все запросы по умолчанию идут с токеном супервайзера; тесты ролей задают свой. */
+    MockMvc mvc;
 
     @MockitoBean UserClient users;
     @MockitoBean CatalogClient catalog;
 
     UUID userId = UUID.randomUUID();
     UUID serviceId = UUID.randomUUID();
+
+    @BeforeEach
+    void setUpMockMvc() {
+        mvc = MockMvcBuilders.webAppContextSetup(context)
+                .apply(springSecurity())
+                .defaultRequest(get("/").header(HttpHeaders.AUTHORIZATION, bearer(UUID.randomUUID(), "SUPERVISOR")))
+                .build();
+    }
+
+    private String bearer(UUID id, String role) {
+        return "Bearer " + tokens.issueForUser(id, "test-" + role, role).value();
+    }
+
+    private MockHttpServletRequestBuilder as(MockHttpServletRequestBuilder request, UUID id, String role) {
+        return request.header(HttpHeaders.AUTHORIZATION, bearer(id, role));
+    }
 
     private JsonNode send(Map<String, Object> body, int expectedStatus) throws Exception {
         MvcResult res = mvc.perform(post("/api/v1/spam/send")
@@ -122,11 +147,15 @@ class DispatchApiTest {
     }
 
     private String createLog(String contact) throws Exception {
-        when(users.get(userId)).thenReturn(new UserClient.UserDto(userId, BigDecimal.TEN));
+        return createLog(userId, contact);
+    }
+
+    private String createLog(UUID owner, String contact) throws Exception {
+        when(users.get(owner)).thenReturn(new UserClient.UserDto(owner, BigDecimal.TEN));
         MvcResult res = mvc.perform(post("/api/v1/spam-log")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of(
-                                "userId", userId,
+                                "userId", owner,
                                 "victimContact", contact,
                                 "status", "QUEUED"))))
                 .andExpect(status().isCreated())
@@ -336,5 +365,149 @@ class DispatchApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.received", is(true)))
                 .andExpect(jsonPath("$.echo.contact", is("x")));
+    }
+
+    // ---- лабораторная №3: роли ----
+
+    private Map<String, Object> ownSendBody(int count) {
+        return Map.of(
+                "serviceId", serviceId,
+                "victimContact", "demo@example.com",
+                "messageBody", "hello",
+                "messageCount", count);
+    }
+
+    @Test
+    void clientSendsFromOwnAccountWithoutPassingUserId() throws Exception {
+        receiverStatus = 200;
+        priced("1.0000");
+        when(users.debit(eq(userId), any()))
+                .thenReturn(new UserClient.BalanceDto(new BigDecimal("8.00")));
+
+        mvc.perform(as(post("/api/v1/spam/send"), userId, "USER_PRO")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(ownSendBody(2))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("SENT")));
+
+        verify(users).debit(eq(userId), any());
+    }
+
+    @Test
+    void clientCannotSpendSomeoneElsesBalance() throws Exception {
+        mvc.perform(as(post("/api/v1/spam/send"), UUID.randomUUID(), "USER_PRO")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(sendBody(1))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status", is(403)));
+
+        verify(users, never()).debit(any(), any());
+    }
+
+    @Test
+    void freeUserHasLowerMessageLimit() throws Exception {
+        mvc.perform(as(post("/api/v1/spam/send"), userId, "USER_FREE")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(ownSendBody(11))))
+                .andExpect(status().isForbidden());
+        verify(catalog, never()).get(any());
+
+        receiverStatus = 200;
+        priced("1.0000");
+        when(users.debit(eq(userId), any()))
+                .thenReturn(new UserClient.BalanceDto(new BigDecimal("0.00")));
+        mvc.perform(as(post("/api/v1/spam/send"), userId, "USER_FREE")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(ownSendBody(10))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void buyOperatorManagesProxiesButCannotSend() throws Exception {
+        UUID operator = UUID.randomUUID();
+
+        mvc.perform(as(post("/api/v1/spam/send"), operator, "BUY_OPERATOR")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(ownSendBody(1))))
+                .andExpect(status().isForbidden());
+
+        mvc.perform(as(post("/api/v1/proxy"), operator, "BUY_OPERATOR")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "host", "10.0.0.20", "port", 3128,
+                                "protocol", "HTTP", "status", "ACTIVE"))))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void clientsAndVictimsCannotTouchProxies() throws Exception {
+        for (String role : new String[] {"USER_PRO", "USER_FREE", "VICTIM"}) {
+            mvc.perform(as(get("/api/v1/proxy"), userId, role))
+                    .andExpect(status().isForbidden());
+            mvc.perform(as(post("/api/v1/proxy"), userId, role)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of(
+                                    "host", "10.0.0.21", "port", 3128,
+                                    "protocol", "HTTP", "status", "ACTIVE"))))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
+    @Test
+    void clientSeesOnlyOwnSpamLog() throws Exception {
+        UUID me = UUID.randomUUID();
+        UUID other = UUID.randomUUID();
+        String mine = createLog(me, "mine@example.com");
+        String theirs = createLog(other, "theirs@example.com");
+
+        mvc.perform(as(get("/api/v1/spam-log/{id}", mine), me, "USER_PRO"))
+                .andExpect(status().isOk());
+        mvc.perform(as(get("/api/v1/spam-log/{id}", theirs), me, "USER_PRO"))
+                .andExpect(status().isForbidden());
+
+        mvc.perform(as(get("/api/v1/spam-log").param("size", "50"), me, "USER_PRO"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Total-Count", "1"))
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].userId", is(me.toString())));
+
+        mvc.perform(as(get("/api/v1/spam-log/feed").param("size", "50"), me, "USER_FREE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].id", is(mine)));
+        mvc.perform(as(get("/api/v1/spam-log/feed").param("cursor", mine), me, "USER_FREE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(0)));
+    }
+
+    @Test
+    void onlySupervisorEditsSpamLog() throws Exception {
+        UUID me = UUID.randomUUID();
+        String mine = createLog(me, "own@example.com");
+
+        mvc.perform(as(delete("/api/v1/spam-log/{id}", mine), me, "USER_PRO"))
+                .andExpect(status().isForbidden());
+        mvc.perform(as(patch("/api/v1/spam-log/{id}", mine), me, "USER_PRO")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"SENT\"}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(as(get("/api/v1/spam-log"), me, "BUY_OPERATOR"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void requestWithoutTokenIsRejectedButReceiverIsPublic() throws Exception {
+        MockMvc anonymous = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+
+        anonymous.perform(get("/api/v1/proxy"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("WWW-Authenticate", "Bearer"))
+                .andExpect(jsonPath("$.status", is(401)));
+        anonymous.perform(get("/api/v1/spam-log").header(HttpHeaders.AUTHORIZATION, "Bearer broken"))
+                .andExpect(status().isUnauthorized());
+        anonymous.perform(post("/api/v1/test-receiver/inbox")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
     }
 }

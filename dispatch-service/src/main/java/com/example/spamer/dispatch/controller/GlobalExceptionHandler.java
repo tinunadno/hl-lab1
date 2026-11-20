@@ -3,6 +3,7 @@ package com.example.spamer.dispatch.controller;
 import com.example.spamer.common.error.ApiError;
 import com.example.spamer.common.error.BusinessException;
 import com.example.spamer.common.error.ConflictException;
+import com.example.spamer.common.error.ForbiddenException;
 import com.example.spamer.common.error.DependencyUnavailableException;
 import com.example.spamer.common.error.NotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +24,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(NotFoundException ex, HttpServletRequest req) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), req, null);
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiError> handleForbidden(ForbiddenException ex, HttpServletRequest req) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), req, null);
     }
 
     @ExceptionHandler(ConflictException.class)

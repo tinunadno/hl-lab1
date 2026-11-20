@@ -5,3 +5,5 @@ databaseChangeLog:
       file: db/changelog/changes/002-create-user-service-subscriptions.yaml
   - include:
       file: db/changelog/changes/003-create-balance-operations.yaml
+  - include:
+      file: db/changelog/changes/004-add-auth.yaml

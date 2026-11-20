@@ -1,12 +1,15 @@
 package com.example.spamer.user.service;
 
 import com.example.spamer.common.error.ConflictException;
+import com.example.spamer.common.error.ForbiddenException;
 import com.example.spamer.common.error.NotFoundException;
+import com.example.spamer.common.security.CurrentUser;
 import com.example.spamer.user.domain.UserEntity;
 import com.example.spamer.user.domain.UserRepository;
 import com.example.spamer.user.dto.CreateUserRequest;
 import com.example.spamer.user.dto.PatchUserRequest;
 import com.example.spamer.user.dto.UserResponse;
+import com.example.spamer.user.security.PasswordHasher;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -25,24 +28,37 @@ public class UserService {
 
     private final UserRepository repo;
     private final R2dbcEntityTemplate template;
+    private final PasswordHasher passwords;
 
+    /** Создание пользователя. Доступ только супервайзеру проверяется в контроллере. */
     @Transactional
     public Mono<UserResponse> create(CreateUserRequest req) {
         return ensureUsernameFree(req.username())
                 .then(ensureEmailFree(req.email()))
-                .then(Mono.defer(() -> {
+                .then(passwords.hash(req.password()))
+                .flatMap(hash -> {
                     UserEntity u = new UserEntity();
                     u.setId(UUID.randomUUID());
                     u.setCreatedAt(OffsetDateTime.now());
-                    apply(u, req);
-
+                    apply(u, req, hash);
                     return template.insert(u);
-                }))
+                })
                 .map(UserResponse::from);
     }
 
-    public Mono<UserResponse> get(UUID id) {
+    /** Супервайзер и другие сервисы видят любого пользователя, остальные только себя. */
+    public Mono<UserResponse> get(UUID id, CurrentUser actor) {
+        if (!actor.canSeeEveryone() && !actor.owns(id)) {
+            return Mono.error(new ForbiddenException("You can only view your own profile"));
+        }
         return find(id).map(UserResponse::from);
+    }
+
+    public Mono<UserResponse> me(CurrentUser actor) {
+        if (actor.id() == null) {
+            return Mono.error(new ForbiddenException("Token does not belong to a user"));
+        }
+        return find(actor.id()).map(UserResponse::from);
     }
 
     public Flux<UserResponse> list(int page, int size) {
@@ -61,21 +77,39 @@ public class UserService {
                     ? Mono.empty() : ensureUsernameFree(req.username());
             Mono<Void> emailCheck = u.getEmail().equals(req.email())
                     ? Mono.empty() : ensureEmailFree(req.email());
-            return usernameCheck.then(emailCheck).then(Mono.defer(() -> {
-                apply(u, req);
-                return saveUpdated(u);
-            }));
+            return usernameCheck.then(emailCheck)
+                    .then(passwords.hash(req.password()))
+                    .flatMap(hash -> {
+                        apply(u, req, hash);
+                        return saveUpdated(u);
+                    });
         }).map(UserResponse::from);
     }
 
+    /**
+     * Логика зависит от того, кто меняет: супервайзер может менять любое поле любого
+     * пользователя, а владелец профиля только свои {@code email} и {@code password}.
+     */
     @Transactional
-    public Mono<UserResponse> patch(UUID id, PatchUserRequest req) {
+    public Mono<UserResponse> patch(UUID id, PatchUserRequest req, CurrentUser actor) {
+        if (!actor.isSupervisor()) {
+            if (!actor.owns(id)) {
+                return Mono.error(new ForbiddenException("You can only change your own profile"));
+            }
+            if (req.touchesPrivilegedFields()) {
+                return Mono.error(new ForbiddenException(
+                        "Only a supervisor can change username, role or balance"));
+            }
+        }
         return find(id).flatMap(u -> {
             boolean newUsername = req.username() != null && !req.username().equals(u.getUsername());
             boolean newEmail = req.email() != null && !req.email().equals(u.getEmail());
             Mono<Void> usernameCheck = newUsername ? ensureUsernameFree(req.username()) : Mono.empty();
             Mono<Void> emailCheck = newEmail ? ensureEmailFree(req.email()) : Mono.empty();
-            return usernameCheck.then(emailCheck).then(Mono.defer(() -> {
+            Mono<String> newHash = req.password() != null
+                    ? passwords.hash(req.password())
+                    : Mono.just(u.getPasswordHash());
+            return usernameCheck.then(emailCheck).then(newHash).flatMap(hash -> {
                 if (req.username() != null) {
                     u.setUsername(req.username());
                 }
@@ -88,13 +122,17 @@ public class UserService {
                 if (req.balance() != null) {
                     u.setBalance(req.balance());
                 }
+                u.setPasswordHash(hash);
                 return saveUpdated(u);
-            }));
+            });
         }).map(UserResponse::from);
     }
 
     @Transactional
-    public Mono<Void> delete(UUID id) {
+    public Mono<Void> delete(UUID id, CurrentUser actor) {
+        if (actor.owns(id)) {
+            return Mono.error(new ForbiddenException("A supervisor cannot delete their own account"));
+        }
         return find(id).flatMap(repo::delete);
     }
 
@@ -108,11 +146,12 @@ public class UserService {
         return repo.save(u);
     }
 
-    private void apply(UserEntity u, CreateUserRequest req) {
+    private void apply(UserEntity u, CreateUserRequest req, String passwordHash) {
         u.setUsername(req.username());
         u.setEmail(req.email());
         u.setRole(req.role());
         u.setBalance(req.balance() != null ? req.balance() : BigDecimal.ZERO);
+        u.setPasswordHash(passwordHash);
     }
 
     private Mono<Void> ensureUsernameFree(String username) {

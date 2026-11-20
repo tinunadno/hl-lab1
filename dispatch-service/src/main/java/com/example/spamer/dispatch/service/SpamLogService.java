@@ -47,24 +47,35 @@ public class SpamLogService {
         return mapper.toResponse(find(id));
     }
 
+    /** {@code owner == null} — весь журнал, иначе записи одного пользователя. */
     @Transactional(readOnly = true)
-    public List<SpamLogResponse> list(int page, int size) {
-        return repo.findAll(PageRequest.of(page, size)).stream()
+    public List<SpamLogResponse> list(int page, int size, UUID owner) {
+        PageRequest pageable = PageRequest.of(page, size);
+        return (owner == null ? repo.findAll(pageable) : repo.findAllByUserId(owner, pageable))
+                .stream()
                 .map(mapper::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public long count() {
-        return repo.count();
+    public long count(UUID owner) {
+        return owner == null ? repo.count() : repo.countByUserId(owner);
     }
 
 
     @Transactional(readOnly = true)
-    public CursorPage<SpamLogResponse> feed(UUID cursor, int size) {
-        List<SpamLogEntity> rows = cursor == null
-                ? repo.findAllByOrderByIdAsc(Limit.of(size + 1))
-                : repo.findByIdGreaterThanOrderByIdAsc(cursor, Limit.of(size + 1));
+    public CursorPage<SpamLogResponse> feed(UUID cursor, int size, UUID owner) {
+        Limit limit = Limit.of(size + 1);
+        List<SpamLogEntity> rows;
+        if (owner == null) {
+            rows = cursor == null
+                    ? repo.findAllByOrderByIdAsc(limit)
+                    : repo.findByIdGreaterThanOrderByIdAsc(cursor, limit);
+        } else {
+            rows = cursor == null
+                    ? repo.findByUserIdOrderByIdAsc(owner, limit)
+                    : repo.findByUserIdAndIdGreaterThanOrderByIdAsc(owner, cursor, limit);
+        }
 
         String next = null;
         if (rows.size() > size) {

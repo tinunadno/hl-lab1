@@ -3,12 +3,18 @@ package com.example.spamer.catalog;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.spamer.catalog.dto.ServiceResponse;
+import com.example.spamer.common.security.JwtProperties;
+import com.example.spamer.common.security.JwtSupport;
+import com.example.spamer.common.security.JwtTokenIssuer;
 import java.util.Map;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -25,7 +31,26 @@ class ServiceCatalogApiTest {
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16");
 
     @Autowired
+    WebTestClient anonymous;
+
+    @Autowired
+    JwtProperties jwt;
+
+    /** Клиент с токеном супервайзера. */
     WebTestClient web;
+
+    @BeforeEach
+    void authenticate() {
+        web = as("SUPERVISOR");
+    }
+
+    private WebTestClient as(String role) {
+        String token = new JwtTokenIssuer(JwtSupport.encoder(jwt), jwt)
+                .issueForUser(UUID.randomUUID(), "test-" + role, role).value();
+        return anonymous.mutate()
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .build();
+    }
 
     private ServiceResponse create(String name) {
         return web.post().uri("/api/v1/services")
@@ -108,5 +133,40 @@ class ServiceCatalogApiTest {
     void malformedIdRejected() {
         web.get().uri("/api/v1/services/not-a-uuid").exchange()
                 .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void buyOperatorEditsCatalog() {
+        as("BUY_OPERATOR").post().uri("/api/v1/services")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(Map.of("name", "op-" + System.nanoTime(), "pricePerMessage", "1.0000"))
+                .exchange()
+                .expectStatus().isCreated();
+    }
+
+    @Test
+    void clientsReadButCannotEditCatalog() {
+        ServiceResponse created = create("ro-" + System.nanoTime());
+
+        for (String role : new String[] {"USER_PRO", "USER_FREE", "VICTIM", "SERVICE"}) {
+            WebTestClient client = as(role);
+            client.get().uri("/api/v1/services/{id}", created.id()).exchange()
+                    .expectStatus().isOk();
+            client.post().uri("/api/v1/services")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(Map.of("name", "nope-" + System.nanoTime(), "pricePerMessage", "1.0000"))
+                    .exchange()
+                    .expectStatus().isForbidden()
+                    .expectBody().jsonPath("$.status").isEqualTo(403);
+            client.delete().uri("/api/v1/services/{id}", created.id()).exchange()
+                    .expectStatus().isForbidden();
+        }
+    }
+
+    @Test
+    void anonymousIsRejected() {
+        anonymous.get().uri("/api/v1/services").exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody().jsonPath("$.status").isEqualTo(401);
     }
 }

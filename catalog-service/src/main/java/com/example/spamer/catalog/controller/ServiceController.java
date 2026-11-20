@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,9 +32,13 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class ServiceController {
 
+    /** Каталог читают все вошедшие, а меняют только супервайзер и оператор закупок. */
+    static final String CAN_EDIT = "hasAnyRole('SUPERVISOR', 'BUY_OPERATOR')";
+
     private final ServiceCatalogService service;
 
     @PostMapping
+    @PreAuthorize(CAN_EDIT)
     public Mono<ResponseEntity<ServiceResponse>> create(@Valid @RequestBody CreateServiceRequest req) {
         return service.create(req).map(created -> ResponseEntity
                 .created(URI.create("/api/v1/services/" + created.id()))
@@ -56,18 +61,21 @@ public class ServiceController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize(CAN_EDIT)
     public Mono<ServiceResponse> replace(
             @PathVariable UUID id, @Valid @RequestBody CreateServiceRequest req) {
         return service.replace(id, req);
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize(CAN_EDIT)
     public Mono<ServiceResponse> patch(
             @PathVariable UUID id, @Valid @RequestBody PatchServiceRequest req) {
         return service.patch(id, req);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize(CAN_EDIT)
     public Mono<ResponseEntity<Void>> delete(@PathVariable UUID id) {
         return service.delete(id).thenReturn(ResponseEntity.noContent().<Void>build());
     }

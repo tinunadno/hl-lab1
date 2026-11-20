@@ -23,6 +23,9 @@ public class UserEntity {
 
     private UserRole role;
 
+    /** BCrypt-хэш. Наружу не отдаётся: {@code UserResponse} это поле не содержит. */
+    private String passwordHash;
+
     private BigDecimal balance = BigDecimal.ZERO;
 
     private OffsetDateTime createdAt;

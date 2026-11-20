@@ -63,6 +63,9 @@ services:
       USER_DB_JDBC_URL: jdbc:postgresql://db:5432/spamer_users
       DB_USERNAME: ${DB_USERNAME:-spamer}
       DB_PASSWORD: ${DB_PASSWORD:-spamer}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-0123456789abcdef}
+      SUPERVISOR_USERNAME: ${SUPERVISOR_USERNAME:-supervisor}
+      SUPERVISOR_PASSWORD: ${SUPERVISOR_PASSWORD:-supervisor-pass}
     depends_on:
       db:
         condition: service_healthy
@@ -90,6 +93,7 @@ services:
       CATALOG_DB_URL: jdbc:postgresql://db:5432/spamer_catalog
       DB_USERNAME: ${DB_USERNAME:-spamer}
       DB_PASSWORD: ${DB_PASSWORD:-spamer}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-0123456789abcdef}
     depends_on:
       db:
         condition: service_healthy
@@ -117,6 +121,7 @@ services:
       DISPATCH_DB_URL: jdbc:postgresql://db:5432/spamer_dispatch
       DB_USERNAME: ${DB_USERNAME:-spamer}
       DB_PASSWORD: ${DB_PASSWORD:-spamer}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-0123456789abcdef}
       SENDER_TARGET_URL: ${SENDER_TARGET_URL:-http://localhost:8083/api/v1/test-receiver/inbox}
     depends_on:
       db:

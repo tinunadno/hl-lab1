@@ -32,7 +32,8 @@ class UserApiTest extends AbstractIntegrationTest {
                         "username", renamed,
                         "email", renamed + "@example.com",
                         "role", "USER_PRO",
-                        "balance", "5.00"))
+                        "balance", "5.00",
+                        "password", "replaced-password"))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody().jsonPath("$.role").isEqualTo("USER_PRO");
@@ -61,11 +62,13 @@ class UserApiTest extends AbstractIntegrationTest {
     void duplicateUsernameConflicts() {
         String name = "dup" + System.nanoTime();
         post("/api/v1/users", Map.of(
-                "username", name, "email", name + "@example.com", "role", "USER_FREE"))
+                "username", name, "email", name + "@example.com", "role", "USER_FREE",
+                "password", PASSWORD))
                 .expectStatus().isCreated();
 
         post("/api/v1/users", Map.of(
-                "username", name, "email", "other" + name + "@example.com", "role", "USER_FREE"))
+                "username", name, "email", "other" + name + "@example.com", "role", "USER_FREE",
+                "password", PASSWORD))
                 .expectStatus().isEqualTo(409);
     }
 
@@ -87,12 +90,12 @@ class UserApiTest extends AbstractIntegrationTest {
         String uri = "/internal/v1/users/" + id + "/balance/debit";
         String operation = UUID.randomUUID().toString();
 
-        post(uri, Map.of("operationId", operation, "amount", "4.00"))
+        internal(uri, Map.of("operationId", operation, "amount", "4.00"))
                 .expectStatus().isOk()
                 .expectBody().jsonPath("$.balance").isEqualTo(6.0);
 
 
-        post(uri, Map.of("operationId", operation, "amount", "4.00"))
+        internal(uri, Map.of("operationId", operation, "amount", "4.00"))
                 .expectStatus().isOk()
                 .expectBody().jsonPath("$.balance").isEqualTo(6.0);
     }
@@ -102,12 +105,12 @@ class UserApiTest extends AbstractIntegrationTest {
         String id = createUser("USER_PRO", "1.00");
         String operation = UUID.randomUUID().toString();
 
-        post("/internal/v1/users/" + id + "/balance/debit",
+        internal("/internal/v1/users/" + id + "/balance/debit",
                 Map.of("operationId", operation, "amount", "5.00"))
                 .expectStatus().isEqualTo(422);
 
 
-        post("/internal/v1/users/" + id + "/balance/refund", Map.of("operationId", operation))
+        internal("/internal/v1/users/" + id + "/balance/refund", Map.of("operationId", operation))
                 .expectStatus().isOk()
                 .expectBody().jsonPath("$.balance").isEqualTo(1.0);
     }
@@ -116,18 +119,18 @@ class UserApiTest extends AbstractIntegrationTest {
     void refundReturnsMoneyOnce() {
         String id = createUser("USER_PRO", "10.00");
         String operation = UUID.randomUUID().toString();
-        post("/internal/v1/users/" + id + "/balance/debit",
+        internal("/internal/v1/users/" + id + "/balance/debit",
                 Map.of("operationId", operation, "amount", "4.00"))
                 .expectStatus().isOk();
 
         for (int i = 0; i < 2; i++) {
-            post("/internal/v1/users/" + id + "/balance/refund", Map.of("operationId", operation))
+            internal("/internal/v1/users/" + id + "/balance/refund", Map.of("operationId", operation))
                     .expectStatus().isOk()
                     .expectBody().jsonPath("$.balance").isEqualTo(10.0);
         }
 
 
-        post("/internal/v1/users/" + id + "/balance/debit",
+        internal("/internal/v1/users/" + id + "/balance/debit",
                 Map.of("operationId", operation, "amount", "4.00"))
                 .expectStatus().isEqualTo(409);
     }
@@ -137,11 +140,11 @@ class UserApiTest extends AbstractIntegrationTest {
         String id = createUser("USER_PRO", "10.00");
         String operation = UUID.randomUUID().toString();
 
-        post("/internal/v1/users/" + id + "/balance/refund", Map.of("operationId", operation))
+        internal("/internal/v1/users/" + id + "/balance/refund", Map.of("operationId", operation))
                 .expectStatus().isOk()
                 .expectBody().jsonPath("$.balance").isEqualTo(10.0);
 
-        post("/internal/v1/users/" + id + "/balance/debit",
+        internal("/internal/v1/users/" + id + "/balance/debit",
                 Map.of("operationId", operation, "amount", "4.00"))
                 .expectStatus().isEqualTo(409);
 
@@ -169,17 +172,17 @@ class UserApiTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void adminKeepsRoleWhenSubscribing() {
+    void supervisorKeepsRoleWhenSubscribing() {
         UUID serviceId = UUID.randomUUID();
         when(catalog.get(serviceId))
                 .thenReturn(new CatalogClient.CatalogServiceDto(serviceId, "bulk", true));
-        String id = createUser("ADMIN", "0");
+        String id = createUser("SUPERVISOR", "0");
 
         post("/api/v1/subscriptions", Map.of("userId", id, "serviceId", serviceId))
                 .expectStatus().isCreated();
 
         web.get().uri("/api/v1/users/{id}", id).exchange()
-                .expectBody().jsonPath("$.role").isEqualTo("ADMIN");
+                .expectBody().jsonPath("$.role").isEqualTo("SUPERVISOR");
     }
 
     @Test

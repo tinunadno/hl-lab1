@@ -3,8 +3,10 @@ package com.example.spamer.user.controller;
 import com.example.spamer.common.error.ApiError;
 import com.example.spamer.common.error.BusinessException;
 import com.example.spamer.common.error.ConflictException;
+import com.example.spamer.common.error.ForbiddenException;
 import com.example.spamer.common.error.DependencyUnavailableException;
 import com.example.spamer.common.error.NotFoundException;
+import com.example.spamer.user.service.InvalidCredentialsException;
 import jakarta.validation.ConstraintViolationException;
 import java.time.Instant;
 import java.util.List;
@@ -23,6 +25,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(NotFoundException ex, ServerHttpRequest req) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), req, null);
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiError> handleForbidden(ForbiddenException ex, ServerHttpRequest req) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), req, null);
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiError> handleBadCredentials(
+            InvalidCredentialsException ex, ServerHttpRequest req) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), req, null);
     }
 
     @ExceptionHandler(ConflictException.class)

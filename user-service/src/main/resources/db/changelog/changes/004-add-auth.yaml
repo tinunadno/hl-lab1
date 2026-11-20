@@ -1,0 +1,33 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-add-password-hash
+      author: lab
+      comment: >-
+        BCrypt-хэш пароля. Пользователи, созданные до лабораторной №3, получают значение '!',
+        которое не является BCrypt-хэшем и не совпадает ни с одним паролем: войти они не смогут,
+        пока супервайзер не задаст пароль.
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: password_hash
+                  type: varchar(100)
+        - addNotNullConstraint:
+            tableName: users
+            columnName: password_hash
+            columnDataType: varchar(100)
+            defaultNullValue: '!'
+
+  - changeSet:
+      id: 004-admin-becomes-supervisor
+      author: lab
+      changes:
+        - sql:
+            sql: ALTER TABLE users DROP CONSTRAINT chk_users_role
+        - sql:
+            sql: UPDATE users SET role = 'SUPERVISOR' WHERE role = 'ADMIN'
+        - sql:
+            sql: >-
+              ALTER TABLE users ADD CONSTRAINT chk_users_role
+              CHECK (role IN ('SUPERVISOR', 'USER_FREE', 'USER_PRO', 'VICTIM', 'BUY_OPERATOR'))

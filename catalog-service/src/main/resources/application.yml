@@ -5,3 +5,11 @@ spring:
     import: configserver:${CONFIG_SERVER_URL:http://localhost:8888}
   main:
     web-application-type: reactive
+
+spamer:
+  security:
+    jwt:
+      # общий для всех сервисов секрет HS256, не короче 32 байт
+      secret: ${JWT_SECRET:dev-only-secret-change-me-0123456789abcdef}
+      issuer: ${JWT_ISSUER:spamer}
+      access-token-ttl: ${JWT_TTL:1h}

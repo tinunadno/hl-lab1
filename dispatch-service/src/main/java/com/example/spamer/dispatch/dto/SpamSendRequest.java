@@ -7,8 +7,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
+/** {@code userId} можно не передавать: клиент отправляет от своего имени. */
 public record SpamSendRequest(
-        @NotNull UUID userId,
+        UUID userId,
         @NotNull UUID serviceId,
         @NotBlank @Size(max = 256) String victimContact,
         String messageBody,

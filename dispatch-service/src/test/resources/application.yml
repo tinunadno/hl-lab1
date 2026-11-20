@@ -19,6 +19,12 @@ eureka:
     enabled: false
 
 spamer:
+  security:
+    jwt:
+      secret: test-secret-for-integration-tests-0123456789
+      issuer: spamer
+  limits:
+    free-max-messages: 10
   sender:
     target-url: http://localhost:8083/api/v1/test-receiver/inbox
     connect-timeout-ms: 2000

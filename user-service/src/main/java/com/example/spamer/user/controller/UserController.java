@@ -1,9 +1,11 @@
 package com.example.spamer.user.controller;
 
+import com.example.spamer.common.security.CurrentUser;
 import com.example.spamer.user.dto.CreateUserRequest;
 import com.example.spamer.user.dto.PatchUserRequest;
 import com.example.spamer.user.dto.UserResponse;
 import com.example.spamer.user.service.UserService;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -12,6 +14,9 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,19 +38,28 @@ public class UserController {
 
     private final UserService service;
 
+    /** Пользователей создают только супервайзеры. */
     @PostMapping
+    @PreAuthorize("hasRole('SUPERVISOR')")
     public Mono<ResponseEntity<UserResponse>> create(@Valid @RequestBody CreateUserRequest req) {
         return service.create(req).map(created -> ResponseEntity
                 .created(URI.create("/api/v1/users/" + created.id()))
                 .body(created));
     }
 
+    @GetMapping("/me")
+    public Mono<UserResponse> me(@Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+        return service.me(CurrentUser.from(jwt));
+    }
+
     @GetMapping("/{id}")
-    public Mono<UserResponse> get(@PathVariable UUID id) {
-        return service.get(id);
+    public Mono<UserResponse> get(
+            @PathVariable UUID id, @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+        return service.get(id, CurrentUser.from(jwt));
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('SUPERVISOR')")
     public Mono<ResponseEntity<List<UserResponse>>> list(
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(50) int size) {
@@ -56,19 +70,25 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('SUPERVISOR')")
     public Mono<UserResponse> replace(
             @PathVariable UUID id, @Valid @RequestBody CreateUserRequest req) {
         return service.replace(id, req);
     }
 
+    /** Супервайзер меняет что угодно, владелец профиля только email и пароль. */
     @PatchMapping("/{id}")
     public Mono<UserResponse> patch(
-            @PathVariable UUID id, @Valid @RequestBody PatchUserRequest req) {
-        return service.patch(id, req);
+            @PathVariable UUID id, @Valid @RequestBody PatchUserRequest req,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+        return service.patch(id, req, CurrentUser.from(jwt));
     }
 
     @DeleteMapping("/{id}")
-    public Mono<ResponseEntity<Void>> delete(@PathVariable UUID id) {
-        return service.delete(id).thenReturn(ResponseEntity.noContent().<Void>build());
+    @PreAuthorize("hasRole('SUPERVISOR')")
+    public Mono<ResponseEntity<Void>> delete(
+            @PathVariable UUID id, @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+        return service.delete(id, CurrentUser.from(jwt))
+                .thenReturn(ResponseEntity.noContent().<Void>build());
     }
 }
